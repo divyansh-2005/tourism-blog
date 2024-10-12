@@ -6,7 +6,9 @@
     "orientation": "portrait",
     "permissions": [
       "LOCATION",
-      "MEDIA_LIBRARY"
+      "MEDIA_LIBRARY",
+      "CAMERA",
+      "STORAGE"
     ],
     "icon": "",
     "userInterfaceStyle": "light",

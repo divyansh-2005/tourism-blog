@@ -1,10 +1,12 @@
 // src/screens/Blog/BlogListScreen.js
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, FlatList, StyleSheet, ActivityIndicator, Alert, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Button, FlatList, StyleSheet, ActivityIndicator, Alert, Image, TouchableOpacity, Share } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {jwtDecode} from 'jwt-decode'; // Correct import for jwt-decode
+import { jwtDecode } from 'jwt-decode'; // Correct import for jwt-decode
+import * as FileSystem from 'expo-file-system'; // Import FileSystem from expo
+import * as Sharing from 'expo-sharing';
 import { BACKEND_URL } from '@env'; // Adjust this based on your env setup
 
 const BlogListScreen = ({ navigation }) => {
@@ -59,6 +61,37 @@ const BlogListScreen = ({ navigation }) => {
         }
     };
 
+    const shareBlog = async (title, description, imageUrl, location) => {
+        try {
+            // Step 1: Extract file extension from image URL
+            const extension = imageUrl.split('.').pop().split(/\#|\?/)[0]; // Handle query params in URL
+            const downloadPath = `${FileSystem.cacheDirectory}${title.replace(/\s+/g, '_')}.${extension}`; // Use cacheDirectory
+    
+            // Step 2: Download the image to the local file system
+            const { uri: localUrl } = await FileSystem.downloadAsync(imageUrl, downloadPath);
+    
+            // Step 3: Check if sharing is available
+            if (!(await Sharing.isAvailableAsync())) {
+                Alert.alert('Sharing is not available', 'Your device does not allow sharing');
+                return;
+            }
+    
+            // Step 4: Create the message to share
+            const message = `Check out this blog!\n\nTitle: ${title}\nDescription: ${description}\nLocation: ${location.join(', ')}`;
+    
+            // Step 5: Share the image and message
+            await Sharing.shareAsync(localUrl, {
+                mimeType: extension === 'png' ? 'image/png' : 'image/jpeg', // Set the correct mime type
+                dialogTitle: title, // Provide a title for the sharing dialog
+            });
+            
+            console.log('Image shared successfully:', localUrl);
+        } catch (error) {
+            Alert.alert('Error sharing blog', error.message);
+            console.error('Error sharing blog:', error);
+        }
+    };
+    
     const renderBlogItem = ({ item, index }) => {
         const isUserBlog = item.user === userId; // Check if the blog belongs to the logged-in user
 
@@ -88,6 +121,10 @@ const BlogListScreen = ({ navigation }) => {
                                 />
                             </View>
                         )}
+                        <Button 
+                            title="Share" 
+                            onPress={() => shareBlog(item.title, item.description, item.imageUrl, item.location.coordinates)} 
+                        />
                     </View>
                 )}
             </TouchableOpacity>
